@@ -31,6 +31,11 @@ func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r}
 }
 
+func (d *Decoder) Ordered() *Decoder {
+	d.d.ordered = true
+	return d
+}
+
 // UseNumber causes the Decoder to unmarshal a number into an interface{} as a
 // Number instead of as a float64.
 func (dec *Decoder) UseNumber() { dec.d.useNumber = true }
@@ -411,7 +416,7 @@ func (dec *Decoder) Token() (Token, error) {
 			}
 			return dec.tokenError(c)
 
-		case '"':
+		default:
 			if dec.tokenState == tokenObjectStart || dec.tokenState == tokenObjectKey {
 				var x string
 				old := dec.tokenState
@@ -425,9 +430,6 @@ func (dec *Decoder) Token() (Token, error) {
 				dec.tokenState = tokenObjectColon
 				return x, nil
 			}
-			fallthrough
-
-		default:
 			if !dec.tokenValueAllowed() {
 				return dec.tokenError(c)
 			}

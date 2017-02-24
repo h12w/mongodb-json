@@ -19,6 +19,8 @@ import (
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	"gopkg.in/mgo.v2/bson"
 )
 
 // Unmarshal parses the JSON-encoded data and stores the result
@@ -255,6 +257,8 @@ type decodeState struct {
 	savedError error
 	useNumber  bool
 	ext        Extension
+
+	ordered bool
 }
 
 // errPhase is used for errors that should not happen unless
@@ -773,7 +777,7 @@ func (d *decodeState) isNull(off int) bool {
 // name consumes a const or function from d.data[d.off-1:], decoding into the value v.
 // the first byte of the function name has been read already.
 func (d *decodeState) name(v reflect.Value) {
-	if d.isNull(d.off-1) {
+	if d.isNull(d.off - 1) {
 		d.literal(v)
 		return
 	}
@@ -1076,9 +1080,9 @@ func (d *decodeState) storeKeyed(v reflect.Value) bool {
 }
 
 var (
-	trueBytes = []byte("true")
+	trueBytes  = []byte("true")
 	falseBytes = []byte("false")
-	nullBytes = []byte("null")
+	nullBytes  = []byte("null")
 )
 
 func (d *decodeState) storeValue(v reflect.Value, from interface{}) {
@@ -1399,6 +1403,7 @@ func (d *decodeState) objectInterface() interface{} {
 	}
 
 	m := make(map[string]interface{})
+	var orderedDoc bson.D
 	for {
 		// Read opening " of string key or closing }.
 		op := d.scanWhile(scanSkipSpace)
@@ -1441,7 +1446,11 @@ func (d *decodeState) objectInterface() interface{} {
 		}
 
 		// Read value.
-		m[key] = d.valueInterface()
+		if d.ordered {
+			orderedDoc = append(orderedDoc, bson.DocElem{Name: key, Value: d.valueInterface()})
+		} else {
+			m[key] = d.valueInterface()
+		}
 
 		// Next token must be , or }.
 		op = d.scanWhile(scanSkipSpace)
@@ -1452,7 +1461,11 @@ func (d *decodeState) objectInterface() interface{} {
 			d.error(errPhase)
 		}
 	}
-	return m
+	if d.ordered {
+		return orderedDoc
+	} else {
+		return m
+	}
 }
 
 // literalInterface is like literal but returns an interface value.
@@ -1521,6 +1534,7 @@ func (d *decodeState) nameInterface() interface{} {
 	}
 
 	m := make(map[string]interface{})
+	var orderedDoc bson.D
 	for i := 0; ; i++ {
 		// Look ahead for ) - can only happen on first iteration.
 		op := d.scanWhile(scanSkipSpace)
@@ -1535,7 +1549,11 @@ func (d *decodeState) nameInterface() interface{} {
 		if i >= len(funcData.args) {
 			d.error(fmt.Errorf("json: too many arguments for function %s", funcName))
 		}
-		m[funcData.args[i]] = d.valueInterface()
+		if d.ordered {
+			orderedDoc = append(orderedDoc, bson.DocElem{Name: funcData.args[i], Value: d.valueInterface()})
+		} else {
+			m[funcData.args[i]] = d.valueInterface()
+		}
 
 		// Next token must be , or ).
 		op = d.scanWhile(scanSkipSpace)
@@ -1546,7 +1564,11 @@ func (d *decodeState) nameInterface() interface{} {
 			d.error(errPhase)
 		}
 	}
-	return map[string]interface{}{funcData.key: m}
+	if d.ordered {
+		return bson.D{bson.DocElem{Name: funcData.key, Value: orderedDoc}}
+	} else {
+		return map[string]interface{}{funcData.key: m}
+	}
 }
 
 // getu4 decodes \uXXXX from the beginning of s, returning the hex value,
