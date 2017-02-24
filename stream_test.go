@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/mgo.v2/bson"
+
 	"h12.me/mongodb-json"
 )
 
@@ -13,7 +15,7 @@ func TestStream(t *testing.T) {
 [
     {$match: {
         "impression.created_at": {$exists:1},
-        "impression.created_at": {$gte: ISODate("2017-02-24T14:06:08+08:00"), $lt: ISODate("2017-02-24T15:06:08+08:00")},
+        "impression.created_at": {$gte: ISODate("2017-02-24T14:06:08Z"), $lt: ISODate("2017-02-24T15:06:08Z")},
         "response.created_at": {$exists:1},
         "response.ad.bid_type": "cpi"
     }},
@@ -62,12 +64,19 @@ func TestStream(t *testing.T) {
 ]
 `
 
-	d := json.NewDecoder(strings.NewReader(q))
-	for d.More() {
-		tok, err := d.Token()
-		if err != nil {
-			t.Fatal(err)
-		}
-		fmt.Println(tok)
+	d := json.NewDecoder(strings.NewReader(q)).Ordered()
+	var m bson.D
+	//var m []interface{}
+	if err := d.Decode(&m); err != nil {
+		t.Fatal(err)
 	}
+	fmt.Printf("%#v\n", m)
+
+	// for d.More() {
+	// 	tok, err := d.Token()
+	// 	if err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// 	_ = tok
+	// }
 }
