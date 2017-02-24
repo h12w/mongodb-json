@@ -599,6 +599,10 @@ func (d *decodeState) object(v reflect.Value) {
 		v.Set(reflect.ValueOf(d.objectInterface()))
 		return
 	}
+	if v.Type() == reflect.TypeOf(bson.DocElem{}) {
+		v.FieldByName("Value").Set(reflect.ValueOf(d.objectInterface()))
+		return
+	}
 
 	// Check type of target:
 	//   struct or
