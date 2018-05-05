@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"h12.me/mongodb-json/json"
+	"h12.io/mongodb-json/json"
 )
 
 // UnmarshalJSON unmarshals a JSON value that may hold non-standard

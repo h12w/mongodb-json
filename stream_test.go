@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"h12.me/mongodb-json"
+	"h12.io/mongodb-json"
 )
 
 func TestStream(t *testing.T) {

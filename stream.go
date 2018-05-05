@@ -3,7 +3,7 @@ package json
 import (
 	"io"
 
-	"h12.me/mongodb-json/json"
+	"h12.io/mongodb-json/json"
 )
 
 func NewDecoder(r io.Reader) *json.Decoder {
